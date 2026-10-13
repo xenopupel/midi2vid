@@ -166,4 +166,8 @@ def build(path, fps=30, start=0.0, duration=None, tail=1.5):
             *[round(v, 3) for v in key_vals],
         ])
         t += dt
-    return {"fps": fps, "bpm": bpm, "sections": labels, "fields": FRAME_FIELDS, "frames": frames}
+    return {
+        "fps": fps, "bpm": bpm, "bar_len": bar_len, "song_end": song_end,
+        "drop_start": None if first_drop is None else first_drop * bar_len,
+        "sections": labels, "fields": FRAME_FIELDS, "frames": frames,
+    }

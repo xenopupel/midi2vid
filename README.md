@@ -13,6 +13,8 @@ npm install                     # playwright, used for headless WebGL rendering
 python -m midi2vid beat.mid --audio beat.mp3 -o beat.mp4
 ```
 
+Press Ctrl+C while rendering to stop early: the video is still written with the frames rendered so far.
+
 Without `--audio` a rough preview synth is rendered from the MIDI so you can still hear the sync.
 Try it on the bundled demo beat:
 
@@ -26,7 +28,9 @@ Useful flags:
 | flag | what it does |
 | --- | --- |
 | `--seed N` | world seed; by default it is derived from the MIDI file, so the same beat always gets the same world |
-| `--start S --duration D` | render only a window of the song (seconds) |
+| `--start 0:45 --duration 20` | render only a window of the song; times are seconds or m:ss |
+| `--end 1:05` | end of the window instead of (or together with) `--duration` |
+| `--drop` | clip around the first drop: starts 2 bars before it, 20 s unless `--duration`/`--end` is given |
 | `--audio-offset S` | shift the audio if the MIDI and the bounce are not aligned |
 | `--lines N` | internal vertical resolution, 240-360 looks like PS1 (default 320) |
 | `--fps N` | frame rate (default 30) |

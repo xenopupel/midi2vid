@@ -22,11 +22,11 @@ function loadPlaywright() {
     '-vf', `vflip,scale=${job.outWidth}:${job.outHeight}:flags=neighbor`,
     '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-pix_fmt', 'yuv420p',
     job.out,
-  ], { stdio: ['pipe', 'inherit', 'inherit'] });
+  ], { stdio: ['pipe', 'inherit', 'inherit'], detached: true });  // own process group: Ctrl+C must not kill the encoder
   const ffDone = new Promise((res, rej) => ffmpeg.on('close', c => (c === 0 ? res() : rej(new Error('ffmpeg exited ' + c)))));
 
   const { chromium } = loadPlaywright();
-  const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+  const browser = await chromium.launch({ handleSIGINT: false, handleSIGTERM: false, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
   const page = await browser.newPage();
   page.on('pageerror', e => { console.error('shader page error:', e.message); process.exit(1); });
   await page.setContent(`<canvas id="c" width="${W}" height="${H}"></canvas>`);
@@ -57,9 +57,19 @@ function loadPlaywright() {
     };
   }, { src, W, H, seed: job.seed });
 
+  // Ctrl+C stops rendering but still finishes the video with the frames done so far
+  let stop = false;
+  const onStop = () => {
+    if (stop) process.exit(130);
+    stop = true;
+    process.stderr.write('\nstopping: finishing the video with the frames rendered so far (Ctrl+C again to abort)\n');
+  };
+  process.on('SIGINT', onStop);
+  process.on('SIGTERM', onStop);
+
   const n = job.frames.length;
   const t0 = Date.now();
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < n && !stop; i++) {
     const b64 = await page.evaluate(([f, r]) => window.renderFrame(f, r), [job.fields, job.frames[i]]);
     if (!ffmpeg.stdin.write(Buffer.from(b64, 'base64'))) await new Promise(r => ffmpeg.stdin.once('drain', r));
     if (i % 30 === 0 || i === n - 1) {
