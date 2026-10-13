@@ -3,6 +3,7 @@ precision highp float;
 uniform vec2 R;          // render size in pixels
 uniform float T;         // time in seconds
 uniform float SEED;      // world seed
+uniform float uPlace;    // 0 street, 1 forest, 2 corridor, 3 heaven
 // per-frame MIDI state (see midi2vid/timeline.py)
 uniform float uKick, uSnare, uHat, uBass;   // drum / 808 envelopes 0..1
 uniform float uDrop, uBreak, uRiser;        // section states 0..1

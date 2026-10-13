@@ -30,7 +30,7 @@ function loadPlaywright() {
   const page = await browser.newPage();
   page.on('pageerror', e => { console.error('shader page error:', e.message); process.exit(1); });
   await page.setContent(`<canvas id="c" width="${W}" height="${H}"></canvas>`);
-  await page.evaluate(({ src, W, H, seed }) => {
+  await page.evaluate(({ src, W, H, seed, place }) => {
     const gl = document.getElementById('c').getContext('webgl2', { preserveDrawingBuffer: true });
     const sh = (t, s) => { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o);
       if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
@@ -42,7 +42,7 @@ function loadPlaywright() {
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
     gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
     const u = n => gl.getUniformLocation(p, n);
-    gl.uniform2f(u('R'), W, H); gl.uniform1f(u('SEED'), seed);
+    gl.uniform2f(u('R'), W, H); gl.uniform1f(u('SEED'), seed); gl.uniform1f(u('uPlace'), place);
     const pixels = new Uint8Array(W * H * 4);
     window.renderFrame = (layout, row) => {
       let o = 0;
@@ -59,7 +59,7 @@ function loadPlaywright() {
       for (let i = 0; i < pixels.length; i += CH) s += String.fromCharCode.apply(null, pixels.subarray(i, i + CH));
       return btoa(s);
     };
-  }, { src, W, H, seed: job.seed });
+  }, { src, W, H, seed: job.seed, place: job.place });
 
   // Ctrl+C stops rendering but still finishes the video with the frames done so far
   let stop = false;

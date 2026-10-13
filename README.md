@@ -2,7 +2,8 @@
 
 Turns a MIDI file (plus the beat's audio) into a vertical 1080×1920 video for Reels / TikTok / Shorts.
 
-The first style is **ps1**: a PS1 / Silent Hill world with an instrument standing in the fog.
+The first style is **ps1**: a low-poly PS1-look world. By default the instrument floats on a cloud in the sky
+(`--place heaven`); `street`, `forest` and `corridor` are the foggy Silent Hill places.
 A seed builds the world, the MIDI animates it.
 
 ## Quick start
@@ -27,6 +28,7 @@ Useful flags:
 
 | flag | what it does |
 | --- | --- |
+| `--place heaven` | where the instrument stands: `heaven` (default), `street`, `forest`, `corridor` |
 | `--seed N` | world seed; by default it is derived from the MIDI file, so the same beat always gets the same world |
 | `--start 0:45 --duration 20` | render only a window of the song; times are seconds or m:ss |
 | `--end 1:05` | end of the window instead of (or together with) `--duration` |
@@ -37,10 +39,10 @@ Useful flags:
 
 ## What the seed picks
 
-- location: foggy street, forest, school/hospital corridor, Otherworld
 - instrument: grand piano, upright piano, cheap keyboard on an X-stand
-- fog colour and time of day (grey, blue dusk, sick green, pitch black with a flashlight)
-- weather: none, snow/ash, rain
+- heaven: sky palette (noon, sunset, pink dawn, white overcast), sun position, cloud islands
+- other places: fog colour and time of day (grey, blue dusk, sick green, pitch black with a flashlight)
+- weather: none, snow (drifting feathers in heaven), rain
 - camera framings for every shot
 - rare events: a silhouette standing in the fog
 
@@ -57,13 +59,13 @@ Useful flags:
 | MIDI | on screen |
 | --- | --- |
 | notes played by the goth or a creature | keys light up red, folded onto 24 keys |
-| kick (or the 808 if there is no kick) | lamps and ceiling panels buzz and cut out |
+| kick (or the 808 if there is no kick) | the sun swells (heaven); lamps and ceiling panels buzz and cut out (other places) |
 | snare / clap | the frame drops resolution, rows tear, colour depth collapses |
 | hats / cymbals | faint brightness noise |
 | 808 / bass | fog breathes, camera shakes |
-| bar before the first drop | siren pulse and strobe |
-| drop (drums and 808 playing) | the world turns into the Otherworld: rust, grated floor, red fog, ash |
-| break (no drums after the drop) | every light dies except one bulb over the instrument, the figure appears |
+| bar before the first drop | light pulses and strobes |
+| drop (drums and 808 playing) | the sun gets brighter and warmer |
+| break (no drums after the drop) | the sky turns to dusk, every light dies except one bulb over the instrument, the figure appears |
 
 Note roles come from track names first (FL Studio exports one track per channel, named after it):
 `kick`, `snare`/`clap`/`rim`, `hat`/`OH`/`ride`/`crash`, `perc`/`tom`, `808`/`bass`/`sub`.

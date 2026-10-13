@@ -18,6 +18,7 @@ from . import synth, timeline
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STYLES = {"ps1": "ps1.frag"}
+PLACES = ["street", "forest", "corridor", "heaven"]
 
 
 def parse_time(text):
@@ -53,6 +54,7 @@ def main(argv=None):
     ap.add_argument("--audio", help="the beat's audio; without it a rough preview synth is used")
     ap.add_argument("--audio-offset", type=float, default=0.0, help="seconds to shift the audio (positive = later)")
     ap.add_argument("--style", default="ps1", choices=sorted(STYLES))
+    ap.add_argument("--place", default="heaven", choices=PLACES, help="where the instrument stands (default: heaven)")
     ap.add_argument("--seed", type=int, help="world seed (default: derived from the MIDI file)")
     ap.add_argument("--start", type=parse_time, default=None, help="start time: seconds or m:ss (default 0)")
     ap.add_argument("--end", type=parse_time, help="end time: seconds or m:ss")
@@ -72,7 +74,7 @@ def main(argv=None):
     name = os.path.splitext(os.path.basename(args.midi))[0]
     out = args.out or f"{name}_{args.style}_s{seed}.mp4"
 
-    print(f"midi2vid: {args.midi} -> {out}  style={args.style} seed={seed}")
+    print(f"midi2vid: {args.midi} -> {out}  style={args.style} place={args.place} seed={seed}")
     start, duration = resolve_window(args)
     tl = timeline.build(args.midi, fps=args.fps, start=start, duration=duration, lead=args.lead)
     clip = len(tl["frames"]) / args.fps
@@ -87,7 +89,7 @@ def main(argv=None):
             "shader": os.path.join(HERE, "shaders", STYLES[args.style]),
             "common": os.path.join(HERE, "shaders", "common.glsl"),
             "width": w, "height": h, "outWidth": out_w, "outHeight": out_h,
-            "fps": args.fps, "seed": seed, "layout": tl["layout"], "frames": tl["frames"], "out": silent,
+            "fps": args.fps, "seed": seed, "place": PLACES.index(args.place), "layout": tl["layout"], "frames": tl["frames"], "out": silent,
         }
         job_path = os.path.join(tmp, "job.json")
         with open(job_path, "w") as f:
