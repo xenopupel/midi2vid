@@ -3,7 +3,7 @@ import wave
 
 import numpy as np
 
-from .timeline import read_notes, DRUM_CHANNEL, KICKS, SNARES, HATS, BASS_MAX_PITCH
+from .timeline import read_notes
 
 SR = 44100
 
@@ -20,21 +20,21 @@ def render(midi_path, wav_path, tail=1.5):
     for n in notes:
         s = int(n.start * SR)
         vel = n.velocity / 127.0
-        if n.channel == DRUM_CHANNEL:
-            if n.pitch in KICKS:
+        if n.role in ("kick", "snare", "hat", "perc"):
+            if n.role == "kick":
                 t = np.arange(int(0.35 * SR)) / SR
                 f = 45 + 120 * np.exp(-t * 30)
                 sig = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t * 9)
-            elif n.pitch in SNARES:
+            elif n.role == "snare":
                 t = np.arange(int(0.25 * SR)) / SR
                 sig = (rng.standard_normal(len(t)) * 0.6 + np.sin(2 * np.pi * 190 * t)) * np.exp(-t * 18)
-            elif n.pitch in HATS:
+            elif n.role in ("hat", "perc"):
                 t = np.arange(int(0.06 * SR)) / SR
                 noise = rng.standard_normal(len(t))
                 sig = np.diff(noise, prepend=0) * 0.35 * np.exp(-t * 60)
             else:
                 continue
-        elif n.pitch <= BASS_MAX_PITCH:  # 808
+        elif n.role == "bass":  # 808
             dur = n.end - n.start + 0.3
             t = np.arange(int(dur * SR)) / SR
             f = _hz(n.pitch) * (1 + 0.6 * np.exp(-t * 25))

@@ -48,16 +48,20 @@ Useful flags:
 
 | MIDI | on screen |
 | --- | --- |
-| melodic notes (above B2) | keys light up red, folded onto 24 keys |
-| kick (GM 35/36, or the 808 if there is no drum track) | lamps and ceiling panels buzz and cut out |
-| snare / clap (GM 37-40) | the frame drops resolution, rows tear, colour depth collapses |
+| melodic notes | keys light up red, folded onto 24 keys |
+| kick (or the 808 if there is no kick) | lamps and ceiling panels buzz and cut out |
+| snare / clap | the frame drops resolution, rows tear, colour depth collapses |
 | hats / cymbals | faint brightness noise |
-| 808 / bass (B2 and below) | fog breathes, camera shakes |
+| 808 / bass | fog breathes, camera shakes |
 | bar before the first drop | siren pulse and strobe |
-| drop (dense bars) | the world turns into the Otherworld: rust, grated floor, red fog, ash |
-| break (sparse bars after the drop) | every light dies except one bulb over the instrument, the figure appears |
+| drop (drums and 808 playing) | the world turns into the Otherworld: rust, grated floor, red fog, ash |
+| break (no drums after the drop) | every light dies except one bulb over the instrument, the figure appears |
 
-Sections are detected from note density per bar. Drums are read from MIDI channel 10.
+Note roles come from track names first (FL Studio exports one track per channel, named after it):
+`kick`, `snare`/`clap`/`rim`, `hat`/`OH`/`ride`/`crash`, `perc`/`tom`, `808`/`bass`/`sub`.
+Unnamed tracks fall back to General MIDI drums on channel 10 and pitch (B2 and below = bass).
+With no kick track the 808 notes drive the kick.
+The drop is where drums and 808 play; before it is the intro, gaps after it are breaks.
 A new camera shot starts every 4 bars and on every section change.
 
 ## Layout
