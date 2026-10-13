@@ -67,6 +67,12 @@ def main(argv=None):
     ap.add_argument("--size", default="1080x1920", help="output size WxH")
     args = ap.parse_args(argv)
 
+    for label, path in (("MIDI", args.midi), ("audio", args.audio)):
+        if path and not os.path.isfile(path):
+            folder = os.path.dirname(path) or "."
+            found = sorted(os.listdir(folder)) if os.path.isdir(folder) else []
+            hint = ("files in " + folder + ": " + ", ".join(found)) if found else f"folder {folder!r} not found or empty"
+            raise SystemExit(f"{label} file not found: {path}\n  {hint}")
     seed = args.seed if args.seed is not None else seed_from_file(args.midi)
     out_w, out_h = (int(v) for v in args.size.lower().split("x"))
     h = args.lines
