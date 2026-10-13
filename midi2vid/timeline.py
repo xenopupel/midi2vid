@@ -147,7 +147,7 @@ def _sections(notes, bar_len, n_bars):
             energy[b] += weight
     peak = max(energy) or 1.0
     hot = [e >= (0.25 if beat else 0.6) * peak for e in energy]
-    # fill one-bar holes so the Otherworld does not flicker on and off
+    # fill one-bar holes so the drop does not flicker on and off
     for b in range(1, n_bars - 1):
         if not hot[b] and hot[b - 1] and hot[b + 1]:
             hot[b] = True

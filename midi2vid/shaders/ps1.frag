@@ -1,7 +1,7 @@
-// PS1 / Silent Hill world. SEED builds the world, the MIDI uniforms animate it:
-// keys light up per note, kick flickers the lamps, snare glitches the frame,
-// 808 makes the fog breathe, the drop turns the world into the Otherworld,
-// the break kills every light but one.
+// PS1-look world. uPlace picks heaven or a foggy Silent Hill place, SEED builds
+// the rest, the MIDI uniforms animate it: the goth and the creatures press keys,
+// kick pulses the sun / flickers the lamps, snare glitches the frame, 808 makes
+// the haze breathe, the drop brightens the sun, the break kills every light but one.
 float sd(float k){return fract(sin(SEED*12.9898+k*78.233+SEED*k*.137)*43758.5453);}
 float bayer(vec2 p){ivec2 i=ivec2(mod(p,4.));int m[16]=int[](0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5);return float(m[i.y*4+i.x])/16.-.5;}
 float smin(float a,float b,float k){float h=clamp(.5+.5*(b-a)/k,0.,1.);return mix(b,a,h)-k*h*(1.-h);}
