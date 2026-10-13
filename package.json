@@ -1,0 +1,8 @@
+{
+  "name": "midi2vid-renderer",
+  "private": true,
+  "description": "Headless WebGL frame renderer used by midi2vid",
+  "dependencies": {
+    "playwright": "^1.56.1"
+  }
+}
