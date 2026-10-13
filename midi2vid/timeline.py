@@ -37,7 +37,7 @@ ROLE_WORDS = [
     ("snare", re.compile(r"snare|clap|\bsd\b|\bcp\b|rim")),
     ("hat", re.compile(r"hat|\bhh\b|\boh\b|\bch\b|ride|cym|crash|shaker")),
     ("perc", re.compile(r"perc|tom|conga|bongo|tamb")),
-    ("bass", re.compile(r"808|bass|\bsub\b")),
+    ("bass", re.compile(r"808|8o8|bass|\bsub\b")),
 ]
 
 
