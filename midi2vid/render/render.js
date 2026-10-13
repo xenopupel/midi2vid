@@ -44,11 +44,15 @@ function loadPlaywright() {
     const u = n => gl.getUniformLocation(p, n);
     gl.uniform2f(u('R'), W, H); gl.uniform1f(u('SEED'), seed);
     const pixels = new Uint8Array(W * H * 4);
-    const names = { t: 'T', kick: 'uKick', snare: 'uSnare', hat: 'uHat', bass: 'uBass', drop: 'uDrop',
-      brk: 'uBreak', riser: 'uRiser', shot: 'uShot', shotT: 'uShotT' };
-    window.renderFrame = (fields, row) => {
-      fields.forEach((f, i) => gl.uniform1f(u(names[f]), row[i]));
-      gl.uniform1fv(u('uKeys'), row.slice(fields.length));
+    window.renderFrame = (layout, row) => {
+      let o = 0;
+      for (const [name, n, type] of layout) {
+        const loc = u(name);
+        if (n === 1) gl.uniform1f(loc, row[o]);
+        else if (type === 'vec4') gl.uniform4fv(loc, row.slice(o, o + n));
+        else gl.uniform1fv(loc, row.slice(o, o + n));
+        o += n;
+      }
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
       let s = ''; const CH = 0x8000;
@@ -70,7 +74,7 @@ function loadPlaywright() {
   const n = job.frames.length;
   const t0 = Date.now();
   for (let i = 0; i < n && !stop; i++) {
-    const b64 = await page.evaluate(([f, r]) => window.renderFrame(f, r), [job.fields, job.frames[i]]);
+    const b64 = await page.evaluate(([f, r]) => window.renderFrame(f, r), [job.layout, job.frames[i]]);
     if (!ffmpeg.stdin.write(Buffer.from(b64, 'base64'))) await new Promise(r => ffmpeg.stdin.once('drain', r));
     if (i % 30 === 0 || i === n - 1) {
       const fps = (i + 1) / ((Date.now() - t0) / 1000);

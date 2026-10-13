@@ -10,8 +10,18 @@ import re
 
 import mido
 
+from .performers import Performers
+
 NUM_KEYS = 24
-FRAME_FIELDS = ["t", "kick", "snare", "hat", "bass", "drop", "brk", "riser", "shot", "shotT"]
+# shader uniforms filled from every frame row, in order: (name, float count, glsl type)
+LAYOUT = [
+    ("T", 1, "float"), ("uKick", 1, "float"), ("uSnare", 1, "float"), ("uHat", 1, "float"),
+    ("uBass", 1, "float"), ("uDrop", 1, "float"), ("uBreak", 1, "float"), ("uRiser", 1, "float"),
+    ("uShot", 1, "float"), ("uShotT", 1, "float"),
+    ("uKeys", NUM_KEYS, "float"),   # key intensities 0..1
+    ("uHands", 8, "vec4"),          # left, right: key x, press, lift, active
+    ("uCrit", 12, "vec4"),          # crow, toad, beetle: key x, hop height, squash, visible
+]
 
 DRUM_CHANNEL = 9
 KICKS = {35, 36}
@@ -39,6 +49,8 @@ class Note:
     velocity: int
     channel: int
     role: str  # kick / snare / hat / perc / bass / keys
+    track: int = 0
+    track_name: str = ""
 
 
 def track_role(name):
@@ -78,7 +90,7 @@ def read_notes(path):
     # if some track is named as bass/808, other tracks are not split by pitch
     low_is_bass = not any(track_role(t.name) == "bass" and any(m.type == "note_on" for m in t) for t in mid.tracks)
     notes = []
-    for track in mid.tracks:
+    for ti, track in enumerate(mid.tracks):
         role = track_role(track.name)
         open_notes, tick = {}, 0
         for msg in track:
@@ -91,11 +103,11 @@ def read_notes(path):
                     st, vel = stack.pop(0)
                     s = to_sec(st)
                     notes.append(Note(s, max(to_sec(tick), s + 0.05), msg.note, vel, msg.channel,
-                                      note_role(role, msg.channel, msg.note, low_is_bass)))
+                                      note_role(role, msg.channel, msg.note, low_is_bass), ti, track.name))
         for (ch, pitch), stack in open_notes.items():
             for st, vel in stack:
                 s = to_sec(st)
-                notes.append(Note(s, s + 0.5, pitch, vel, ch, note_role(role, ch, pitch, low_is_bass)))
+                notes.append(Note(s, s + 0.5, pitch, vel, ch, note_role(role, ch, pitch, low_is_bass), ti, track.name))
     notes.sort(key=lambda n: n.start)
     bpm = mido.tempo2bpm(changes[0][1]) if changes else 120.0
     return notes, bpm
@@ -163,7 +175,7 @@ def _env(times, t, decay):
     return math.exp(-(t - times[lo - 1]) / decay)
 
 
-def build(path, fps=30, start=0.0, duration=None, tail=1.5):
+def build(path, fps=30, start=0.0, duration=None, tail=1.5, lead=None):
     notes, bpm = read_notes(path)
     if not notes:
         raise SystemExit(f"{path}: no notes found")
@@ -173,8 +185,7 @@ def build(path, fps=30, start=0.0, duration=None, tail=1.5):
     n_bars = int(math.ceil(song_end / bar_len)) + 1
     labels = _sections(notes, bar_len, n_bars)
 
-    # fold the melodic range onto 24 keys, starting at the C below the lowest note
-    base = 12 * (min(n.pitch for n in keys) // 12)
+    perf = Performers(notes, bar_len, song_end, lead)
 
     # camera shots: new shot every 4 bars and whenever the section changes
     shot_starts = []
@@ -201,16 +212,7 @@ def build(path, fps=30, start=0.0, duration=None, tail=1.5):
         shot_idx = max(i for i, s in enumerate(shot_starts) if s <= t + 1e-6)
         shot_t = t - shot_starts[shot_idx]
 
-        key_vals = [0.0] * NUM_KEYS
-        for n in keys:
-            if n.start > t:
-                break
-            if t - n.end > 0.6:
-                continue
-            k = (n.pitch - base) % NUM_KEYS
-            vel = n.velocity / 127.0
-            v = vel * (0.75 + 0.25 * math.exp(-(t - n.start) / 0.15)) if t <= n.end else vel * math.exp(-(t - n.end) / 0.12)
-            key_vals[k] = max(key_vals[k], v)
+        key_vals = perf.keys(t)
 
         bass_env = 0.0
         for n in bass:
@@ -228,10 +230,11 @@ def build(path, fps=30, start=0.0, duration=None, tail=1.5):
             round(drop, 4), round(brk, 4), round(riser, 4),
             shot_idx, round(shot_t, 3),
             *[round(v, 3) for v in key_vals],
+            *[round(v, 4) for v in perf.frame(t)],
         ])
         t += dt
     return {
         "fps": fps, "bpm": bpm, "bar_len": bar_len, "song_end": song_end,
         "drop_start": None if first_drop is None else first_drop * bar_len,
-        "sections": labels, "fields": FRAME_FIELDS, "frames": frames,
+        "sections": labels, "layout": LAYOUT, "frames": frames, "parts": perf.summary,
     }

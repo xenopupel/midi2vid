@@ -59,6 +59,7 @@ def main(argv=None):
     ap.add_argument("--duration", type=parse_time, help="length: seconds or m:ss (default: to the end of the song)")
     ap.add_argument("--drop", action="store_true",
                     help="cut a clip around the first drop: starts 2 bars before it, 20 s unless --duration/--end")
+    ap.add_argument("--lead", help="track name (or part of it) the goth plays; default: picked per 4 bars")
     ap.add_argument("--fps", type=int, default=30)
     ap.add_argument("--lines", type=int, default=320, help="internal vertical resolution (PS1 look: 240-360)")
     ap.add_argument("--size", default="1080x1920", help="output size WxH")
@@ -73,9 +74,11 @@ def main(argv=None):
 
     print(f"midi2vid: {args.midi} -> {out}  style={args.style} seed={seed}")
     start, duration = resolve_window(args)
-    tl = timeline.build(args.midi, fps=args.fps, start=start, duration=duration)
+    tl = timeline.build(args.midi, fps=args.fps, start=start, duration=duration, lead=args.lead)
     clip = len(tl["frames"]) / args.fps
     print(f"  {tl['bpm']:.0f} bpm, sections: {' '.join(tl['sections'])}")
+    for who, tracks in tl["parts"].items():
+        print(f"  {who:6} plays: {', '.join(tracks) or '-'}")
     print(f"  clip {fmt(start)} - {fmt(start + clip)} ({clip:.1f} s, {len(tl['frames'])} frames)")
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -84,7 +87,7 @@ def main(argv=None):
             "shader": os.path.join(HERE, "shaders", STYLES[args.style]),
             "common": os.path.join(HERE, "shaders", "common.glsl"),
             "width": w, "height": h, "outWidth": out_w, "outHeight": out_h,
-            "fps": args.fps, "seed": seed, "fields": tl["fields"], "frames": tl["frames"], "out": silent,
+            "fps": args.fps, "seed": seed, "layout": tl["layout"], "frames": tl["frames"], "out": silent,
         }
         job_path = os.path.join(tmp, "job.json")
         with open(job_path, "w") as f:

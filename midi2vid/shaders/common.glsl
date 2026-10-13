@@ -8,6 +8,8 @@ uniform float uKick, uSnare, uHat, uBass;   // drum / 808 envelopes 0..1
 uniform float uDrop, uBreak, uRiser;        // section states 0..1
 uniform float uShot, uShotT;                // camera shot index, seconds since cut
 uniform float uKeys[24];                    // key intensities 0..1
+uniform vec4 uHands[2];                     // left, right: key x, press, lift, active
+uniform vec4 uCrit[3];                      // crow, toad, beetle: key x, hop height, squash, visible
 out vec4 O;
 #define PI 3.14159265
 mat2 rot(float a){float c=cos(a),s=sin(a);return mat2(c,-s,s,c);}

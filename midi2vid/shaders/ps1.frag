@@ -4,8 +4,11 @@
 // the break kills every light but one.
 float sd(float k){return fract(sin(SEED*12.9898+k*78.233+SEED*k*.137)*43758.5453);}
 float bayer(vec2 p){ivec2 i=ivec2(mod(p,4.));int m[16]=int[](0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5);return float(m[i.y*4+i.x])/16.-.5;}
+float smin(float a,float b,float k){float h=clamp(.5+.5*(b-a)/k,0.,1.);return mix(b,a,h)-k*h*(1.-h);}
+float sdRBox(vec3 p,vec3 b,float r){vec3 q=abs(p)-b+r;return length(max(q,0.))+min(max(q.x,max(q.y,q.z)),0.)-r;}
 float box(vec3 p,vec3 b){vec3 q=abs(p)-b;return length(max(q,0.))+min(max(q.x,max(q.y,q.z)),0.);}
 int LOC,INST,WX; vec3 FOG; float FOGD; bool FIG,FLASH,NIGHT; float IROT,OW;
+void keyFrame();
 void setup(){
  LOC=int(floor(sd(1.)*4.)); INST=int(floor(sd(2.)*3.)); WX=int(floor(sd(3.)*3.));
  float f=sd(4.);
@@ -19,6 +22,7 @@ void setup(){
  FLASH = NIGHT || OW>.5 || (LOC==1 && sd(9.)<.5);
  FIG = sd(6.)<.4 || uBreak>.5;
  IROT=mix(-.9,.9,sd(7.));
+ keyFrame();
 }
 float M; float KU;
 vec3 rotY(vec3 p,float a){p.xz=rot(a)*p.xz;return p;}
@@ -43,6 +47,94 @@ float instrument(vec3 p){
   d=min(st,body); M=4.;
   float k=box(pp-vec3(0,.9,.06),vec3(.5,.015,.08)); if(k<d){d=k;M=5.;KU=pp.x;}
  }
+ return d;
+}
+// ---------- performers (instrument space: keys along x, player on +z) ----------
+float KEYY,KEYZ,PB;           // key top height, key row depth, performer bounding hit
+void keyFrame(){ KEYY = INST==0? .66 : INST==1? .69 : .915; KEYZ = INST==0? .82 : INST==1? .24 : .06; }
+float sdEll(vec3 p,vec3 r){ float k0=length(p/r),k1=length(p/(r*r)); return k0*(k0-1.)/k1; }
+float sdCap(vec3 p,vec3 a,vec3 b,float r){ vec3 pa=p-a,ba=b-a; float h=clamp(dot(pa,ba)/dot(ba,ba),0.,1.); return length(pa-ba*h)-r; }
+vec3 handPos(vec4 h){ return vec3(h.x, KEYY+.025+h.z*.09-h.y*.018, KEYZ+.03+h.z*.03); }
+vec3 elbow(vec3 s,vec3 h,float side){
+ vec3 m=(s+h)*.5; vec3 d=h-s; float L=length(d); float bend=sqrt(max(.32*.32-L*L*.25,0.));
+ vec3 out_=normalize(vec3(side,-.6,.5)); out_=normalize(out_-d*dot(out_,d)/(L*L)); return m+out_*bend; }
+float goth(vec3 p,out float mat){
+ // seated (or standing at a high keyboard) facing -z toward the keys
+ float hip=KEYY-.22; float zc=KEYZ+.5;
+ vec3 q=p-vec3(0,0,zc);
+ mat=15.;
+ if(length(q-vec3(0,hip+.35,0))>1.1) return length(q-vec3(0,hip+.35,0))-1.;
+ float bob=uKick*.035+uBass*.01;                                   // head nods on the kick
+ float lean=-.08-bob;                                              // leaning in toward the keys
+ vec3 sh=vec3(0,hip+.48,lean);
+ // torso: tapered black coat
+ vec3 tq=q-vec3(0,hip+.24,lean*.5); float w=mix(.15,.12,clamp(tq.y/.24*.5+.5,0.,1.));
+ float torso=sdRBox(tq,vec3(w,.24,.085),.04);
+ float d=torso;
+ // coat tails over the bench
+ d=min(d,sdRBox(q-vec3(0,hip-.02,.05),vec3(.16,.03,.16),.02));
+ // legs down to the floor, knees under the keys
+ for(int s=0;s<2;s++){ float sx=s==0?-.09:.09;
+  vec3 knee=vec3(sx,hip,-.18); vec3 foot=vec3(sx*1.1,.05,-.2);
+  d=min(d,sdCap(q,vec3(sx,hip,.02),knee,.055)); d=min(d,sdCap(q,knee,foot,.05));
+  d=min(d,sdRBox(q-foot-vec3(0,-.02,-.04),vec3(.04,.03,.08),.01)); }
+ // arms reaching to the hands (2-bone IK)
+ vec3 hpL=handPos(uHands[0])-vec3(0,0,zc), hpR=handPos(uHands[1])-vec3(0,0,zc);
+ vec3 sL=sh+vec3(-.15,0,0), sR=sh+vec3(.15,0,0);
+ vec3 eL=elbow(sL,hpL,-1.), eR=elbow(sR,hpR,1.);
+ float arms=min(min(sdCap(q,sL,eL,.042),sdCap(q,eL,hpL,.035)),min(sdCap(q,sR,eR,.042),sdCap(q,eR,hpR,.035)));
+ d=min(d,arms);
+ // head + hair
+ vec3 hc=sh+vec3(0,.17,-.03-bob*.8);
+ float head=sdEll(q-hc,vec3(.075,.095,.085));
+ float hands=min(sdEll(q-hpL,vec3(.035,.018,.045)),sdEll(q-hpR,vec3(.035,.018,.045)));
+ vec3 hq=q-hc-vec3(0,-.07,.035);
+ float hair=sdRBox(hq,vec3(.1,.17,.07),.05);                        // long straight black hair down the back
+ hair=max(hair,-(q.z-hc.z+.06));                                    // keep the face clear
+ hair=min(hair,sdEll(q-hc-vec3(0,.03,.0),vec3(.088,.085,.09)));     // crown
+ float face=head;
+ if(hair<d){d=hair;mat=17.;}
+ if(face<d){d=face;mat=16.;}
+ if(hands<d){d=hands;mat=16.;}
+ // bench
+ float bench=sdRBox(q-vec3(0,hip-.1,.08),vec3(.3,.04,.14),.01); bench=min(bench,sdRBox(vec3(abs(q.x)-.25,q.y-(hip-.1)*.5,q.z-.08),vec3(.025,(hip-.1)*.5,.025),.0));
+ if(bench<d){d=bench;mat=21.;}
+ return d;
+}
+float critter(vec3 p,int i,out float mat){
+ vec4 c=uCrit[i]; if(c.w<.01) return 1e3;
+ float sc= i==0? 1. : i==1? 1.15 : .7;
+ sc*=smoothstep(0.,1.,c.w);                                         // pops in/out of existence
+ if(sc<.02) return 1e3;
+ float sq=c.z*.35;
+ vec3 base=vec3(c.x, KEYY+c.y, KEYZ-.01);
+ vec3 q=(p-base)/sc; q.y/=1.-sq; q.xz/=1.+sq*.5;
+ float d;
+ if(i==0){ // crow
+  mat=18.;
+  d=sdEll(q-vec3(0,.06,0),vec3(.045,.045,.075));
+  d=smin(d,length(q-vec3(0,.11,.06))-.032,.02);
+  float beak=sdEll(q-vec3(0,.105,.105),vec3(.012,.01,.03)); if(beak<d){d=beak;mat=19.5;}
+  d=min(d,sdRBox(q-vec3(0,.07,-.09),vec3(.025,.006,.04),.003));             // tail
+  d=min(d,sdCap(q,vec3(-.015,.02,0),vec3(-.015,0,.01),.006)); d=min(d,sdCap(q,vec3(.015,.02,0),vec3(.015,0,.01),.006));
+  vec3 e=vec3(abs(q.x)-.022,q.y-.12,q.z-.08); if(length(e)-.007<d){d=length(e)-.007;mat=22.;}
+ } else if(i==1){ // toad
+  mat=19.;
+  d=sdEll(q-vec3(0,.045,0),vec3(.075,.045,.07));
+  d=smin(d,sdEll(vec3(abs(q.x)-.06,q.y-.025,q.z+.035),vec3(.035,.025,.045)),.02);   // haunches
+  vec3 e=vec3(abs(q.x)-.035,q.y-.085,q.z-.035); float eye=length(e)-.02; if(eye<d){d=eye;mat=22.;}
+ } else { // beetle
+  mat=20.;
+  d=sdEll(q-vec3(0,.025,0),vec3(.035,.022,.05));
+  d=min(d,sdEll(q-vec3(0,.02,.05),vec3(.018,.014,.016)));
+  for(int k=0;k<3;k++){ float z=-.02+float(k)*.02; d=min(d,sdCap(vec3(abs(q.x),q.y,q.z),vec3(.03,.018,z),vec3(.055,0.,z+.01),.004)); }
+ }
+ return d*sc*(1.-sq*.3);
+}
+float performers(vec3 p,out float mat){
+ vec3 pp=rotY(p-vec3(0,0,-1.),IROT);
+ float m; float d=goth(pp,mat);
+ for(int i=0;i<3;i++){ float cm; float c=critter(pp,i,cm); if(c<d){d=c;mat=cm;} }
  return d;
 }
 float pyramid(vec3 q,float w,float h){ return max((abs(q.x)+abs(q.z))*h/w*.7+q.y*.7-h*.7,-q.y); }
@@ -79,6 +171,7 @@ float map(vec3 p){
   fig=min(fig,box(vec3(abs(q.x)-.07,q.y-.18,q.z),vec3(.06,.2,.07))); if(fig<d){d=fig;M=14.;} }
  float ms=M; float ins=instrument(p);
  if(ins<d) d=ins; else M=ms;
+ float pm; float pd=performers(p,pm); if(pd<d){d=pd;M=pm;}
  return d;
 }
 vec3 nrm(vec3 p){vec2 e=vec2(.002,0);return normalize(vec3(map(p+e.xyy)-map(p-e.xyy),map(p+e.yxy)-map(p-e.yxy),map(p+e.yyx)-map(p-e.yyx)));}
@@ -112,6 +205,15 @@ vec3 tex(vec3 p,vec3 n,float m){
    a=mix(vec3(.4)*(.8+.3*nz),vec3(4.,3.9,3.4)*fl*mix(vec3(1),vec3(1.,.3,.2),OW),panel); if(panel>.5) return a; }
  else if(m==13.) a=vec3(.22,.12,.08)*(.7+.4*nz);
  else if(m==14.) return vec3(.01);
+ else if(m==15.) return vec3(.035,.03,.04)*(.8+.4*nz)+vec3(.02,0,.03)*step(.96,hash(floor(uv*48.)));   // black coat, faint purple threads
+ else if(m==16.) return vec3(.78,.74,.76)*(.92+.1*nz);                               // corpse-pale skin
+ else if(m==17.) return vec3(.02,.02,.025)*(.7+.6*step(.5,fract(uv.x*40.)));         // straight black hair
+ else if(m==18.) return vec3(.03,.03,.045)+vec3(.02,.03,.06)*nz;                      // crow, blue-black sheen
+ else if(m==19.) return mix(vec3(.2,.23,.08),vec3(.1,.08,.04),step(.7,noise(uv*30.)))*(.8+.4*nz);  // warty toad
+ else if(m==19.5) return vec3(.12,.11,.1);
+ else if(m==20.) return mix(vec3(.02,.08,.06),vec3(.08,.03,.12),nz)*1.5;             // iridescent beetle shell
+ else if(m==21.) return vec3(.12,.07,.04)*(.7+.5*nz);
+ else if(m==22.) return vec3(.9,.7,.1);
  return rustable? mix(a,rust,OW) : a;
 }
 float lampFlicker(float id){
@@ -162,16 +264,21 @@ void main(){
  fc.x+=floor((hash(vec2(floor(fc.y/(4.*px)),floor(T*30.)))-.5)*uSnare*uSnare*24.);
  fc=(floor(fc/px)+.5)*px;
  vec2 uv=(2.*fc-R)/R.y;
- // camera: one framing per shot, PS1-style jerky drift (12 fps), 808 shake
+ // camera: one framing per shot, built in instrument space so the keys, the goth's
+ // hands and the creatures are always in view (side / over-the-shoulder angles),
+ // with PS1-style jerky drift (12 fps) and an 808 shake
  float s=uShot;
- // always frame the keyboard side of the instrument (local +z is world angle -IROT)
- float ca=-IROT+mix(-.8,.8,sd(13.+s*3.1)), cd=mix(2.4,3.3,sd(14.+s*3.1)), ch=mix(.8,1.9,sd(15.+s*3.1));
+ float side=sd(16.+s)<.5? -1. : 1.;
+ float ang=side*mix(.55,1.25,sd(13.+s*3.1));                 // angle away from the player's axis
+ float dist=mix(1.35,2.1,sd(14.+s*3.1)), hgt=mix(.45,1.05,sd(15.+s*3.1));
  float tq=floor(uShotT*12.)/12.;
- ca+=(sd(16.+s)-.5)*.08*tq; cd-=.05*tq;
- vec3 ta=vec3(0,.75,-1.); vec3 ro=ta+vec3(sin(ca)*cd,ch-.75,cos(ca)*cd);
- ro.y+=uBass*.02*sin(T*45.); ro.x+=uKick*.015*sin(T*60.);
- if(LOC==2) ro.x=clamp(ro.x,-1.3,1.3);
- vec3 rd=camRay(uv,ro,ta,1.5); vec3 fw=normalize(ta-ro);
+ ang+=side*.025*tq; dist-=.03*tq;
+ vec3 taL=vec3(mix(-.15,.15,sd(17.+s)),KEYY+.12,KEYZ+.12);
+ vec3 roL=taL+vec3(sin(ang)*dist,hgt,cos(ang)*dist);
+ vec3 ro=rotY(roL,-IROT)+vec3(0,0,-1.), ta=rotY(taL,-IROT)+vec3(0,0,-1.);
+ ro.y+=uBass*.02*sin(T*45.); ro.x+=uKick*.012*sin(T*60.);
+ if(LOC==2) ro.x=clamp(ro.x,-1.4,1.4);
+ vec3 rd=camRay(uv,ro,ta,1.35); vec3 fw=normalize(ta-ro);
  // polygon wobble on the snare
  rd.xy+=(vec2(hash(vec2(floor(T*15.),1.)),hash(vec2(floor(T*15.),2.)))-.5)*.02*uSnare;
  float t=0.; for(int i=0;i<180;i++){float h=map(ro+rd*t);if(h<.001||t>30.)break;t+=h*.9;}
@@ -183,6 +290,7 @@ void main(){
   c=alb*(amb+lightAt(p,n,ro,fw));
   if(m==5.&&keyVal()>.05) c=max(c,alb*.9);
   if(m==12.&&alb.r>1.) c=alb;
+  if(m==22.) c=max(c,alb*.6);                                        // eyes catch the light
   c=mix(c,FOG,smoothstep(1.2,FOGD,t));
  }
  if(!NIGHT) c+=vec3(.05)*smoothstep(-.2,1.,uv.y)*(1.-OW)*(1.-uBreak);

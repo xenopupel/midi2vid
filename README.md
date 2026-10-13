@@ -44,11 +44,19 @@ Useful flags:
 - camera framings for every shot
 - rare events: a silhouette standing in the fog
 
+## Performers
+
+- **The goth** sits at the instrument and plays the lead with both hands (2-bone arms reaching for the right keys, the head nods on the kick).
+  The lead is picked per 4 bars: long, high notes win over fast arps and low pads, so it is the chords in the intro and the melody in the drop.
+  Force a track with `--lead "Serum 2 #4"` (any part of the track name).
+- **A crow** hops onto the keys for the second melodic part, **a toad** jumps on the 808, **a beetle** scuttles along a third part when there is one.
+- Creatures only appear while their part plays and skip notes too fast to reach, and only keys someone actually presses light up, so the keyboard stays readable.
+
 ## How the MIDI drives the picture
 
 | MIDI | on screen |
 | --- | --- |
-| melodic notes | keys light up red, folded onto 24 keys |
+| notes played by the goth or a creature | keys light up red, folded onto 24 keys |
 | kick (or the 808 if there is no kick) | lamps and ceiling panels buzz and cut out |
 | snare / clap | the frame drops resolution, rows tear, colour depth collapses |
 | hats / cymbals | faint brightness noise |
@@ -67,6 +75,7 @@ A new camera shot starts every 4 bars and on every section change.
 ## Layout
 
 - `midi2vid/timeline.py`: MIDI → per-frame values (envelopes, sections, shots, key intensities)
+- `midi2vid/performers.py`: picks the parts and animates the goth's hands and the creatures' hops
 - `midi2vid/shaders/`: GLSL styles (`common.glsl` declares the uniforms)
 - `midi2vid/render/render.js`: renders frames in headless Chromium (SwiftShader, no GPU needed) and pipes them into ffmpeg
 - `midi2vid/synth.py`: preview synth used when no audio is given
