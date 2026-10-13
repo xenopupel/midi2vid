@@ -22,7 +22,7 @@ function loadPlaywright() {
     '-vf', `vflip,scale=${job.outWidth}:${job.outHeight}:flags=neighbor`,
     '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-pix_fmt', 'yuv420p',
     job.out,
-  ], { stdio: ['pipe', 'inherit', 'inherit'], detached: true });  // own process group: Ctrl+C must not kill the encoder
+  ], { stdio: ['pipe', 'inherit', 'inherit'], detached: process.platform !== 'win32', windowsHide: true });  // own process group: Ctrl+C must not kill the encoder
   const ffDone = new Promise((res, rej) => ffmpeg.on('close', c => (c === 0 ? res() : rej(new Error('ffmpeg exited ' + c)))));
 
   const { chromium } = loadPlaywright();

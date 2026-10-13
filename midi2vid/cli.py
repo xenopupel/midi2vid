@@ -74,6 +74,8 @@ def main(argv=None):
     name = os.path.splitext(os.path.basename(args.midi))[0]
     out = args.out or f"{name}_{args.style}_s{seed}.mp4"
 
+    if os.path.dirname(out):
+        os.makedirs(os.path.dirname(out), exist_ok=True)
     print(f"midi2vid: {args.midi} -> {out}  style={args.style} place={args.place} seed={seed}")
     start, duration = resolve_window(args)
     tl = timeline.build(args.midi, fps=args.fps, start=start, duration=duration, lead=args.lead)
